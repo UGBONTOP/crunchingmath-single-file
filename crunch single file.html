@@ -23,9 +23,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
         <style>
-        /* =========================================
-           CRUNCH GLASS OS - DESIGN SYSTEM 2.0
-           ========================================= */
 
         :root {
             --bg-deep: #050505;
@@ -1466,9 +1463,7 @@
     </div>
 
 <script>
-    /* =========================================
-       FIREBASE INITIALIZATION & AUTH
-       ========================================= */
+
     const firebaseConfig = {
       apiKey: "AIzaSyBdJdTyqGQIiizJ5_7o3w-ZqNlgsLDi5Dc",
       authDomain: "crunch-arcade-login-data.firebaseapp.com",
@@ -1484,7 +1479,6 @@
     
     let isSkipped = false;
 
-    // Detect Auth State
     auth.onAuthStateChanged(user => {
         if (user || isSkipped) {
             document.getElementById('loginScreen').style.opacity = '0';
@@ -1497,7 +1491,6 @@
             
             if(user) {
                 document.getElementById('signOutBtn').style.display = 'flex';
-                // Sync data automatically from cloud to local upon login
                 loadDataFromCloud(user.uid);
             }
         }
@@ -1512,13 +1505,11 @@
         const pwd = document.getElementById('passwordInput').value.trim();
         if(!uname || !pwd) return showLoginError("Please enter both username and password.");
         
-        // Convert to email behind scenes for Firebase Auth
         const email = uname.toLowerCase() + "@crunch.local";
         
         auth.signInWithEmailAndPassword(email, pwd)
         .catch(error => {
             if(error.code === 'auth/user-not-found' || error.code === 'auth/invalid-login-credentials' || error.code === 'auth/invalid-credential') {
-                // If doesn't exist, try to register
                 auth.createUserWithEmailAndPassword(email, pwd)
                 .then((userCred) => {
                     syncDataToCloud(userCred.user.uid);
@@ -1549,7 +1540,6 @@
         });
     }
 
-    // CLOUD SYNC LOGIC (Backups to Firebase Firestore)
     function syncDataToCloud(uid) {
         if(!uid) return;
         let data = {};
@@ -1572,23 +1562,17 @@
                     refreshFavorites();
                 } catch(e) { console.error("Could not parse cloud data"); }
             } else {
-                // First time sign-in, push local to cloud
                 syncDataToCloud(uid);
             }
         });
     }
 
-    // Wrap setItem to auto-sync to cloud if logged in
     const originalSetItem = localStorage.setItem;
     localStorage.setItem = function() {
         originalSetItem.apply(this, arguments);
         if(auth.currentUser) syncDataToCloud(auth.currentUser.uid);
     };
 
-
-    /* =========================================
-       AUDIO SYSTEM
-       ========================================= */
     let musicPlaying = false;
     function toggleMusic() {
         const audio = document.getElementById('bgMusic');
@@ -1714,7 +1698,6 @@
         if (e.target.tagName === 'INPUT' && e.target.id !== 'panicKeyInput') return;
         if (e.target.tagName === 'TEXTAREA') return;
         const pressedKey = e.key === ' ' ? 'Space' : e.key;
-        // Strict fix to prevent auto-switching: Check if currentPanicKey is defined and non-empty
         if (currentPanicKey && currentPanicKey.length > 0 && pressedKey === currentPanicKey && !e.repeat) {
             let pUrl = document.getElementById('panicUrlInput').value || 'https://classroom.google.com';
             if (!pUrl.startsWith('http')) pUrl = 'https://' + pUrl;
@@ -1930,13 +1913,12 @@
         const shouldPreventClose = localStorage.getItem('preventClose') !== 'false';
         const launchMethod = localStorage.getItem('launchMethod') || 'aboutblank';
 
-        // Fetch the game HTML and inject a <base> tag so relative CDN assets resolve
+
         async function getGameCode() {
             const res = await fetch(path);
             if (!res.ok) throw new Error("HTTP " + res.status);
             let code = await res.text();
             const base = path.substring(0, path.lastIndexOf('/') + 1);
-            // Inject <base> right after <head> (or prepend if no head tag)
             if (/<head[\s>]/i.test(code)) {
                 code = code.replace(/(<head[\s>][^>]*>)/i, '$1<base href="' + base + '">');
             } else {
@@ -1945,13 +1927,7 @@
             return code;
         }
 
-        // Build a wrapper page that loads the game inside a full-screen iframe via srcdoc.
-        // srcdoc iframes inherit the parent page's origin (null), BUT critically scripts
-        // inside them are NOT blocked by the cross-origin document.write restriction,
-        // AND storage APIs (IndexedDB, localStorage) work because the iframe is same-origin
-        // with its parent null-origin context.
         function wrapInSrcdoc(gameCode) {
-            // Escape for use in an HTML attribute value
             const escaped = gameCode.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
             const preventScript = shouldPreventClose
                 ? `<script>window.addEventListener('beforeunload',function(e){e.preventDefault();e.returnValue='';});<\/script>`
@@ -1982,20 +1958,17 @@ document.addEventListener('keydown',function(e){if(e.key==='F11'){e.preventDefau
             return;
         }
 
-        // Open about:blank on the user gesture (synchronous) — stays as about:blank in history
         const win = window.open('about:blank', '_blank');
         if (!win) { alert("Pop-up blocked! Please allow pop-ups to play games."); return; }
         try { applyCloak(win); } catch(e) {}
 
-        // Show loading state immediately
+
         win.document.head.innerHTML = '<style>body{margin:0;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;font-size:1.4rem;}</style>';
         win.document.body.innerHTML = '<div>Loading...</div>';
 
         try {
             const gameCode = await getGameCode();
             const wrapper = wrapInSrcdoc(gameCode);
-            // Replace the about:blank document content with our srcdoc wrapper page
-            // Use document.open/write only for the thin wrapper (no cross-origin scripts in it)
             win.document.open();
             win.document.write(wrapper);
             win.document.close();
@@ -2130,7 +2103,6 @@ document.addEventListener('keydown',function(e){if(e.key==='F11'){e.preventDefau
         } catch (error) { alert("Network error."); } finally { btn.innerText = "Transmit"; btn.disabled = false; }
     }
 
-    // Global listener for the unsaved changes warning on the main window
     window.addEventListener('beforeunload', function (e) {
         if (localStorage.getItem('preventClose') !== 'false') {
             e.preventDefault();
@@ -2153,7 +2125,7 @@ document.addEventListener('keydown',function(e){if(e.key==='F11'){e.preventDefau
         document.getElementById('gradientSelect').value = localStorage.getItem('gradientPref') || 'midnight';
         document.getElementById('dockPos').value = localStorage.getItem('dockPos') || 'left';
         
-        // Games separate by default now
+
         document.getElementById('homepageStyle').value = localStorage.getItem('homepageStyle') || 'separate';
         applyHomepageStyle();
         
